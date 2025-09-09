@@ -56,10 +56,10 @@ import java.util.Set;
  * broker via a {@link FetchRequest}. It contains logic to maintain state between calls to
  * {@link #fetchRecords(FetchConfig, Deserializers, int)}.
  */
-public class CompletedFetch {
+public class CompletedFetch { /* 拉取消息响应 */
 
-    final TopicPartition partition;
-    final FetchResponseData.PartitionData partitionData;
+    final TopicPartition partition; /* 当前分区 */
+    final FetchResponseData.PartitionData partitionData; /* 当前分区消息 */
 
     private final Logger log;
     private final SubscriptionState subscriptions;
@@ -136,7 +136,7 @@ public class CompletedFetch {
      * caller invokes {@link #fetchRecords(FetchConfig, Deserializers, int)}; an empty {@link List list} will be
      * returned instead.
      */
-    void drain() {
+    void drain() { /* 数据已经消费 */
         if (!isConsumed) {
             maybeCloseRecordStream();
             cachedRecordException = null;

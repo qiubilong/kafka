@@ -50,7 +50,7 @@ import java.util.function.Predicate;
 public class FetchBuffer implements AutoCloseable {
 
     private final Logger log;
-    private final ConcurrentLinkedQueue<CompletedFetch> completedFetches;
+    private final ConcurrentLinkedQueue<CompletedFetch> completedFetches; /* 拉取数据缓冲区 */
     private final Lock lock;
     private final Condition blockingCondition;
     private final IdempotentCloser idempotentCloser = new IdempotentCloser();

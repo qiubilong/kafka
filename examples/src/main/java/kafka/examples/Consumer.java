@@ -88,6 +88,8 @@ public class Consumer extends Thread implements ConsumerRebalanceListener {
                     // then tries to fetch records sequentially using the last committed offset or auto.offset.reset policy
                     // returns immediately if there are records or times out returning an empty record set
                     // the next poll must be called within session.timeout.ms to avoid group rebalance
+
+                    //max.poll.records（您这里设置为500）越大，每次poll()拉取的消息越多，可能重复消费的消息数量就越多
                     ConsumerRecords<Integer, String> records = consumer.poll(Duration.ofSeconds(1));
                     for (ConsumerRecord<Integer, String> record : records) {
                         Utils.maybePrintRecord(numRecords, record);

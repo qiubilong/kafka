@@ -232,7 +232,7 @@ public class ClassicKafkaConsumer<K, V> implements ConsumerDelegate<K, V> {
                         config.getBoolean(THROW_ON_FETCH_STABLE_OFFSET_UNSUPPORTED),
                         clientTelemetryReporter);
             }
-            this.fetcher = new Fetcher<>(
+            this.fetcher = new Fetcher<>( /* 拉取数据组件 */
                     logContext,
                     this.client,
                     this.metadata,
@@ -641,9 +641,9 @@ public class ClassicKafkaConsumer<K, V> implements ConsumerDelegate<K, V> {
                 client.maybeTriggerWakeup();
 
                 // try to update assignment metadata BUT do not need to block on the timer for join group
-                updateAssignmentMetadataIfNeeded(timer, false);
+                updateAssignmentMetadataIfNeeded(timer, false); /* 确认分区方案 */
 
-                final Fetch<K, V> fetch = pollForFetches(timer);
+                final Fetch<K, V> fetch = pollForFetches(timer);/* 拉取分区数据 */
                 if (!fetch.isEmpty()) {
                     // before returning the fetched records, we can send off the next round of fetches
                     // and avoid block waiting for their responses to enable pipelining while the user
@@ -659,7 +659,7 @@ public class ClassicKafkaConsumer<K, V> implements ConsumerDelegate<K, V> {
                         log.trace("Returning empty records from `poll()` "
                                 + "since the consumer's position has advanced for at least one topic partition");
                     }
-
+                    /* 返回消费数据 */
                     return this.interceptors.onConsume(new ConsumerRecords<>(fetch.records(), fetch.nextOffsets()));
                 }
             } while (timer.notExpired());
@@ -677,7 +677,7 @@ public class ClassicKafkaConsumer<K, V> implements ConsumerDelegate<K, V> {
     }
 
     boolean updateAssignmentMetadataIfNeeded(final Timer timer, final boolean waitForJoinGroup) {
-        if (coordinator != null && !coordinator.poll(timer, waitForJoinGroup)) {
+        if (coordinator != null && !coordinator.poll(timer, waitForJoinGroup)) {/* 确认分区方案 */
             return false;
         }
 
@@ -692,13 +692,13 @@ public class ClassicKafkaConsumer<K, V> implements ConsumerDelegate<K, V> {
                 Math.min(coordinator.timeToNextPoll(timer.currentTimeMs()), timer.remainingMs());
 
         // if data is available already, return it immediately
-        final Fetch<K, V> fetch = fetcher.collectFetch();
+        final Fetch<K, V> fetch = fetcher.collectFetch(); /* 如果还有缓存结果，就返回 */
         if (!fetch.isEmpty()) {
             return fetch;
         }
 
-        // send any new fetches (won't resend pending fetches)
-        sendFetches();
+        // send any new fetches (won't resend pending fetches) 不会重复请求
+        sendFetches();/*  异步拉取消息请求， 结果缓存到FetchBuffer*/
 
         // We do not want to be stuck blocking in poll if we are missing some positions
         // since the offset lookup may be backing off after a failure
@@ -710,7 +710,7 @@ public class ClassicKafkaConsumer<K, V> implements ConsumerDelegate<K, V> {
         }
 
         log.trace("Polling for fetches with timeout {}", pollTimeout);
-
+        //等待一段时间直到请求数据返回
         Timer pollTimer = time.timer(pollTimeout);
         client.poll(pollTimer, () -> {
             // since a fetch might be completed by the background thread, we need this poll condition

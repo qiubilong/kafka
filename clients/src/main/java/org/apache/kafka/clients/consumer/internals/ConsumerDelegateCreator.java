@@ -63,7 +63,7 @@ public class ConsumerDelegateCreator {
             if (groupProtocol == GroupProtocol.CONSUMER)
                 return new AsyncKafkaConsumer<>(config, keyDeserializer, valueDeserializer, Optional.empty());
             else
-                return new ClassicKafkaConsumer<>(config, keyDeserializer, valueDeserializer);
+                return new ClassicKafkaConsumer<>(config, keyDeserializer, valueDeserializer);/* 默认 */
         } catch (KafkaException e) {
             throw e;
         } catch (Throwable t) {

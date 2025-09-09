@@ -267,7 +267,7 @@ public abstract class AbstractCoordinator implements Closeable {
      * @return true If coordinator discovery and initial connection succeeded, false otherwise
      */
     protected synchronized boolean ensureCoordinatorReady(final Timer timer) {
-        return ensureCoordinatorReady(timer, false);
+        return ensureCoordinatorReady(timer, false);/* 寻找组长leader(broker) */
     }
 
     /**
@@ -292,7 +292,7 @@ public abstract class AbstractCoordinator implements Closeable {
                 fatalFindCoordinatorException = null;
                 throw fatalException;
             }
-            final RequestFuture<Void> future = lookupCoordinator();
+            final RequestFuture<Void> future = lookupCoordinator(); /* 寻找组长leader(broker) */
             client.poll(future, timer, disableWakeup);
 
             if (!future.isDone()) {
@@ -334,7 +334,7 @@ public abstract class AbstractCoordinator implements Closeable {
                 log.debug("No broker available to send FindCoordinator request");
                 return RequestFuture.noBrokersAvailable();
             } else {
-                findCoordinatorFuture = sendFindCoordinatorRequest(node);
+                findCoordinatorFuture = sendFindCoordinatorRequest(node);/* 寻找组长leader(broker) */
             }
         }
         return findCoordinatorFuture;
@@ -413,12 +413,12 @@ public abstract class AbstractCoordinator implements Closeable {
     boolean ensureActiveGroup(final Timer timer) {
         // always ensure that the coordinator is ready because we may have been disconnected
         // when sending heartbeats and does not necessarily require us to rejoin the group.
-        if (!ensureCoordinatorReady(timer)) {
+        if (!ensureCoordinatorReady(timer)) {/* 寻找组长leader(broker) */
             return false;
         }
 
         startHeartbeatThreadIfNeeded();
-        return joinGroupIfNeeded(timer);
+        return joinGroupIfNeeded(timer);/* 加入分组，得到分区方案 */
     }
 
     private synchronized void startHeartbeatThreadIfNeeded() {
@@ -462,7 +462,7 @@ public abstract class AbstractCoordinator implements Closeable {
      */
     boolean joinGroupIfNeeded(final Timer timer) {
         while (rejoinNeededOrPending()) {
-            if (!ensureCoordinatorReady(timer)) {
+            if (!ensureCoordinatorReady(timer)) {/* 寻找组长leader(broker) */
                 return false;
             }
 
@@ -483,7 +483,7 @@ public abstract class AbstractCoordinator implements Closeable {
                 }
             }
 
-            final RequestFuture<ByteBuffer> future = initiateJoinGroup();
+            final RequestFuture<ByteBuffer> future = initiateJoinGroup();/* 加入分组，返回制定分区方案 */
             client.poll(future, timer);
             if (!future.isDone()) {
                 // we ran out of time
@@ -505,7 +505,7 @@ public abstract class AbstractCoordinator implements Closeable {
 
                 if (!hasGenerationReset(generationSnapshot) && stateSnapshot == MemberState.STABLE) {
                     // Duplicate the buffer in case `onJoinComplete` does not complete and needs to be retried.
-                    ByteBuffer memberAssignment = future.value().duplicate();
+                    ByteBuffer memberAssignment = future.value().duplicate(); /* 分区方案 */
 
                     onJoinComplete(generationSnapshot.generationId, generationSnapshot.memberId, generationSnapshot.protocolName, memberAssignment);
 
@@ -573,7 +573,7 @@ public abstract class AbstractCoordinator implements Closeable {
             // in this case we would not update the start time.
             if (lastRebalanceStartMs == -1L)
                 lastRebalanceStartMs = time.milliseconds();
-            joinFuture = sendJoinGroupRequest();
+            joinFuture = sendJoinGroupRequest();/* 加入分组，返回制定分区方案 */
             joinFuture.addListener(new RequestFutureListener<>() {
                 @Override
                 public void onSuccess(ByteBuffer value) {
@@ -609,7 +609,7 @@ public abstract class AbstractCoordinator implements Closeable {
 
         // send a join group request to the coordinator
         log.info("(Re-)joining group");
-        JoinGroupRequest.Builder requestBuilder = new JoinGroupRequest.Builder(
+        JoinGroupRequest.Builder requestBuilder = new JoinGroupRequest.Builder( /* 加入分组请求 */
                 new JoinGroupRequestData()
                         .setGroupId(rebalanceConfig.groupId)
                         .setSessionTimeoutMs(this.rebalanceConfig.sessionTimeoutMs)
@@ -632,7 +632,7 @@ public abstract class AbstractCoordinator implements Closeable {
                 rebalanceConfig.rebalanceTimeoutMs) // guard against overflow since rebalance timeout can be MAX_VALUE
             );
         return client.send(coordinator, requestBuilder, joinGroupTimeoutMs)
-                .compose(new JoinGroupResponseHandler(generation));
+                .compose(new JoinGroupResponseHandler(generation));/* 加入分组，制定分区方案 */
     }
 
     private class JoinGroupResponseHandler extends CoordinatorResponseHandler<JoinGroupResponse, ByteBuffer> {
@@ -673,7 +673,7 @@ public abstract class AbstractCoordinator implements Closeable {
                             clientTelemetryReporter.ifPresent(reporter -> reporter.updateMetricsLabels(
                                 Collections.singletonMap(ClientTelemetryProvider.GROUP_MEMBER_ID, joinResponse.data().memberId())));
 
-                            if (joinResponse.isLeader()) {
+                            if (joinResponse.isLeader()) { /* 消费组组长（先到先得），制定分区方案，同步结果给组长broker，广播分区方案 */
                                 onLeaderElected(joinResponse).chain(future);
                             } else {
                                 onJoinFollower().chain(future);
@@ -914,7 +914,7 @@ public abstract class AbstractCoordinator implements Closeable {
                 .setKey(this.rebalanceConfig.groupId);
         FindCoordinatorRequest.Builder requestBuilder = new FindCoordinatorRequest.Builder(data);
         return client.send(node, requestBuilder)
-                .compose(new FindCoordinatorResponseHandler());
+                .compose(new FindCoordinatorResponseHandler());/* 寻找组长leader(broker) */
     }
 
     private class FindCoordinatorResponseHandler extends RequestFutureAdapter<ClientResponse, Void> {
@@ -935,7 +935,7 @@ public abstract class AbstractCoordinator implements Closeable {
                     // use MAX_VALUE - node.id as the coordinator id to allow separate connections
                     // for the coordinator in the underlying network client layer
                     int coordinatorConnectionId = Integer.MAX_VALUE - coordinatorData.nodeId();
-
+                    /* 找到 组长leader(broker) */
                     AbstractCoordinator.this.coordinator = new Node(
                             coordinatorConnectionId,
                             coordinatorData.host(),

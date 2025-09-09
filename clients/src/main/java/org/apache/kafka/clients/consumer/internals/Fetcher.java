@@ -102,13 +102,13 @@ public class Fetcher<K, V> extends AbstractFetch {
      * an in-flight fetch or pending fetch data.
      * @return number of fetches sent
      */
-    public synchronized int sendFetches() {
+    public synchronized int sendFetches() { /* 批量拉取消息 */
         final Map<Node, FetchSessionHandler.FetchRequestData> fetchRequests = prepareFetchRequests();
         sendFetchesInternal(
                 fetchRequests,
                 (fetchTarget, data, clientResponse) -> {
                     synchronized (Fetcher.this) {
-                        handleFetchSuccess(fetchTarget, data, clientResponse);
+                        handleFetchSuccess(fetchTarget, data, clientResponse);/* 处理拉取消息结果 --> 缓存到FetchBuffer */
                     }
                 },
                 (fetchTarget, data, error) -> {
@@ -142,7 +142,7 @@ public class Fetcher<K, V> extends AbstractFetch {
         }
     }
 
-    public Fetch<K, V> collectFetch() {
+    public Fetch<K, V> collectFetch() { /* 读取缓存数据 */
         return fetchCollector.collectFetch(fetchBuffer);
     }
 

@@ -92,21 +92,21 @@ public class FetchCollector<K, V> {
     public Fetch<K, V> collectFetch(final FetchBuffer fetchBuffer) {
         final Fetch<K, V> fetch = Fetch.empty();
         final Queue<CompletedFetch> pausedCompletedFetches = new ArrayDeque<>();
-        int recordsRemaining = fetchConfig.maxPollRecords;
+        int recordsRemaining = fetchConfig.maxPollRecords;//500
 
         try {
             while (recordsRemaining > 0) {
                 final CompletedFetch nextInLineFetch = fetchBuffer.nextInLineFetch();
 
                 if (nextInLineFetch == null || nextInLineFetch.isConsumed()) {
-                    final CompletedFetch completedFetch = fetchBuffer.peek();
+                    final CompletedFetch completedFetch = fetchBuffer.peek();/* 查看有没有拉取结果 */
 
                     if (completedFetch == null)
                         break;
 
                     if (!completedFetch.isInitialized()) {
                         try {
-                            fetchBuffer.setNextInLineFetch(initialize(completedFetch));
+                            fetchBuffer.setNextInLineFetch(initialize(completedFetch));/* 下次组装拉取结果 */
                         } catch (Exception e) {
                             // Remove a completedFetch upon a parse with exception if (1) it contains no completedFetch, and
                             // (2) there are no fetched completedFetch with actual content preceding this exception.
@@ -122,7 +122,7 @@ public class FetchCollector<K, V> {
                         fetchBuffer.setNextInLineFetch(completedFetch);
                     }
 
-                    fetchBuffer.poll();
+                    fetchBuffer.poll();/* 移除队首元素 */
                 } else if (subscriptions.isPaused(nextInLineFetch.partition)) {
                     // when the partition is paused we add the records back to the completedFetches queue instead of draining
                     // them so that they can be returned on a subsequent poll if the partition is resumed at that time
@@ -130,7 +130,7 @@ public class FetchCollector<K, V> {
                     pausedCompletedFetches.add(nextInLineFetch);
                     fetchBuffer.setNextInLineFetch(null);
                 } else {
-                    final Fetch<K, V> nextFetch = fetchRecords(nextInLineFetch, recordsRemaining);
+                    final Fetch<K, V> nextFetch = fetchRecords(nextInLineFetch, recordsRemaining); /* 组装拉取消息记录 */
                     recordsRemaining -= nextFetch.numRecords();
                     fetch.add(nextFetch);
                 }
@@ -146,14 +146,14 @@ public class FetchCollector<K, V> {
 
         return fetch;
     }
-
+    /* 重平衡后可能会破坏消息顺序性，假设消费实例A消费......#1，重平衡后实例B消费#2、#3，实例B消费比较快就会导致乱序 */
     private Fetch<K, V> fetchRecords(final CompletedFetch nextInLineFetch, int maxRecords) {
         final TopicPartition tp = nextInLineFetch.partition;
 
-        if (!subscriptions.isAssigned(tp)) {
+        if (!subscriptions.isAssigned(tp)) { /* 重平衡后分区已经变化，不再返回数据 */
             // this can happen when a rebalance happened before fetched records are returned to the consumer's poll call
             log.debug("Not returning fetched records for partition {} since it is no longer assigned", tp);
-        } else if (!subscriptions.isFetchable(tp)) {
+        } else if (!subscriptions.isFetchable(tp)) {/* 重平衡中，也不允许消费 */
             // this can happen when a partition is paused before fetched records are returned to the consumer's
             // poll call or if the offset is being reset.
             // It can also happen under the Consumer rebalance protocol, when the consumer changes its subscription.
@@ -167,7 +167,7 @@ public class FetchCollector<K, V> {
                 throw new IllegalStateException("Missing position for fetchable partition " + tp);
 
             if (nextInLineFetch.nextFetchOffset() == position.offset) {
-                List<ConsumerRecord<K, V>> partRecords = nextInLineFetch.fetchRecords(fetchConfig,
+                List<ConsumerRecord<K, V>> partRecords = nextInLineFetch.fetchRecords(fetchConfig, /* 组装消息记录 */
                         deserializers,
                         maxRecords);
 

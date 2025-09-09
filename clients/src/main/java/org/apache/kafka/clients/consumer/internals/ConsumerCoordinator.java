@@ -400,7 +400,7 @@ public final class ConsumerCoordinator extends AbstractCoordinator {
                 "or because static member is configured and the protocol is buggy hence did not get the assignment for this member");
 
         Assignment assignment = ConsumerProtocol.deserializeAssignment(assignmentBuffer);
-
+        /* 消费分区 */
         SortedSet<TopicPartition> assignedPartitions = new TreeSet<>(COMPARATOR);
         assignedPartitions.addAll(assignment.partitions());
 
@@ -458,7 +458,7 @@ public final class ConsumerCoordinator extends AbstractCoordinator {
         if (autoCommitEnabled)
             this.nextAutoCommitTimer.updateAndReset(autoCommitIntervalMs);
 
-        subscriptions.assignFromSubscribed(assignedPartitions);
+        subscriptions.assignFromSubscribed(assignedPartitions);/* 更新消费分区 */
 
         // Add partitions that were not previously owned but are now assigned
         firstException.compareAndSet(null, rebalanceListenerInvoker.invokePartitionsAssigned(addedPartitions));
@@ -511,7 +511,7 @@ public final class ConsumerCoordinator extends AbstractCoordinator {
 
         invokeCompletedOffsetCommitCallbacks();
 
-        if (subscriptions.hasAutoAssignedPartitions()) {
+        if (subscriptions.hasAutoAssignedPartitions()) {/* 默认自动分配分区 */
             if (protocol == null) {
                 throw new IllegalStateException("User configured " + ConsumerConfig.PARTITION_ASSIGNMENT_STRATEGY_CONFIG +
                     " to empty while trying to subscribe for group protocol to auto assign partitions");
@@ -545,7 +545,7 @@ public final class ConsumerCoordinator extends AbstractCoordinator {
 
                     maybeUpdateSubscriptionMetadata();
                 }
-
+                /* 寻找分组Leader，加入分组，得到分区方案*/
                 // if not wait for join group, we would just use a timer of 0
                 if (!ensureActiveGroup(waitForJoinGroup ? timer : time.timer(0L))) {
                     // since we may use a different timer in the callee, we'd still need

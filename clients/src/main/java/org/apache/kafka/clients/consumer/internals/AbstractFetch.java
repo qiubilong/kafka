@@ -74,9 +74,9 @@ public abstract class AbstractFetch implements Closeable {
     protected final FetchConfig fetchConfig;
     protected final Time time;
     protected final FetchMetricsManager metricsManager;
-    protected final FetchBuffer fetchBuffer;
+    protected final FetchBuffer fetchBuffer; /* 拉取数据缓冲区 */
     protected final BufferSupplier decompressionBufferSupplier;
-    protected final Set<Integer> nodesWithPendingFetchRequests;
+    protected final Set<Integer> nodesWithPendingFetchRequests; /* 请求等待中标识，防止重复请求 */
 
     private final Map<Integer, FetchSessionHandler> sessionHandlers;
 
@@ -222,7 +222,7 @@ public abstract class AbstractFetch implements Closeable {
                         partitionData,
                         metricAggregator,
                         fetchOffset);
-                fetchBuffer.add(completedFetch);
+                fetchBuffer.add(completedFetch); /* 拉取结果缓存 */
                 needsWakeup = false;
             }
 
@@ -329,7 +329,7 @@ public abstract class AbstractFetch implements Closeable {
         // disconnection being handled by the heartbeat thread) which will mean the listener
         // will be invoked synchronously.
         log.debug("Adding pending request for node {}", fetchTarget);
-        nodesWithPendingFetchRequests.add(fetchTarget.id());
+        nodesWithPendingFetchRequests.add(fetchTarget.id());/* 请求等待中表示，防止重复请求 */
 
         return request;
     }
@@ -418,7 +418,7 @@ public abstract class AbstractFetch implements Closeable {
      * Create fetch requests for all nodes for which we have assigned partitions
      * that have no existing requests in flight.
      */
-    protected Map<Node, FetchSessionHandler.FetchRequestData> prepareFetchRequests() {
+    protected Map<Node, FetchSessionHandler.FetchRequestData> prepareFetchRequests() { /* 构建批量拉取消息请求 */
         // Update metrics in case there was an assignment change
         metricsManager.maybeUpdateAssignment(subscriptions);
 
@@ -440,8 +440,8 @@ public abstract class AbstractFetch implements Closeable {
 
         Set<Integer> bufferedNodes = bufferedNodes(buffered, currentTimeMs);
 
-        for (TopicPartition partition : unbuffered) {
-            SubscriptionState.FetchPosition position = positionForPartition(partition);
+        for (TopicPartition partition : unbuffered) { /* 遍历无缓存数据分区 */
+            SubscriptionState.FetchPosition position = positionForPartition(partition);/* 分区消费偏移 */
             Optional<Node> nodeOpt = maybeNodeForPosition(partition, position, currentTimeMs);
 
             if (nodeOpt.isEmpty())
@@ -471,7 +471,7 @@ public abstract class AbstractFetch implements Closeable {
                     return fetchSessionHandler.newBuilder();
                 });
                 Uuid topicId = topicIds.getOrDefault(partition.topic(), Uuid.ZERO_UUID);
-                FetchRequest.PartitionData partitionData = new FetchRequest.PartitionData(topicId,
+                FetchRequest.PartitionData partitionData = new FetchRequest.PartitionData(topicId, /* 构建拉取消息请求 */
                         position.offset,
                         FetchRequest.INVALID_LOG_START_OFFSET,
                         fetchConfig.fetchSize,

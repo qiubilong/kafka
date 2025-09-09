@@ -56,7 +56,7 @@ public class FetchRequest extends AbstractRequest {
 
     public static final class PartitionData {
         public final Uuid topicId;
-        public final long fetchOffset;
+        public final long fetchOffset; /* 拉取消息偏移 */
         public final long logStartOffset;
         public final int maxBytes;
         public final Optional<Integer> currentLeaderEpoch;

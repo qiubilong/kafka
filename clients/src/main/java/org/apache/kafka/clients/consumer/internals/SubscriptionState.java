@@ -80,16 +80,16 @@ public class SubscriptionState {
         NONE, AUTO_TOPICS, AUTO_PATTERN, AUTO_PATTERN_RE2J, USER_ASSIGNED, AUTO_TOPICS_SHARE
     }
 
-    /* the type of subscription */
+    /** the type of subscription */
     private SubscriptionType subscriptionType;
 
-    /* the pattern user has requested */
+    /** the pattern user has requested */
     private Pattern subscribedPattern;
 
-    /* the Re2J pattern user has requested */
+    /** the Re2J pattern user has requested */
     private SubscriptionPattern subscribedRe2JPattern;
 
-    /* the list of topics the user has requested */
+    /** the list of topics the user has requested */
     private Set<String> subscription;
 
     /**
@@ -99,18 +99,18 @@ public class SubscriptionState {
      */
     private Set<Uuid> assignedTopicIds;
 
-    /* The list of topics the group has subscribed to. This may include some topics which are not part
+    /** The list of topics the group has subscribed to. This may include some topics which are not part
      * of `subscription` for the leader of a group since it is responsible for detecting metadata changes
      * which require a group rebalance. */
     private Set<String> groupSubscription;
 
-    /* the partitions that are currently assigned, note that the order of partition matters (see FetchBuilder for more details) */
-    private final PartitionStates<TopicPartitionState> assignment;
+    /** the partitions that are currently assigned, note that the order of partition matters (see FetchBuilder for more details) */
+    private final PartitionStates<TopicPartitionState> assignment;/* 消费分区 */
 
-    /* Default offset reset strategy */
+    /** Default offset reset strategy */
     private final AutoOffsetResetStrategy defaultResetStrategy;
 
-    /* User-provided listener to be invoked when assignment changes */
+    /** User-provided listener to be invoked when assignment changes */
     private Optional<ConsumerRebalanceListener> rebalanceListener = Optional.empty();
 
     private int assignmentId = 0;
@@ -981,14 +981,14 @@ public class SubscriptionState {
     private static class TopicPartitionState {
 
         private FetchState fetchState;
-        private FetchPosition position; // last consumed position
+        private FetchPosition position; // last consumed position 消费偏移
 
         private Long highWatermark; // the high watermark from last fetch
         private Long logStartOffset; // the log start offset
         private Long lastStableOffset;
         private boolean paused;  // whether this partition has been paused by the user
         private boolean pendingRevocation;
-        private boolean pendingOnAssignedCallback;
+        private boolean pendingOnAssignedCallback; /* 分区分配中，不允许消费数据 */
         private AutoOffsetResetStrategy resetStrategy;  // the strategy to use if the offset needs resetting
         private Long nextRetryTimeMs;
         private Integer preferredReadReplica;

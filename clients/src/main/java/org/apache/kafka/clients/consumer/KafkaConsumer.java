@@ -606,7 +606,7 @@ public class KafkaConsumer<K, V> implements Consumer<K, V> {
     }
 
     KafkaConsumer(ConsumerConfig config, Deserializer<K> keyDeserializer, Deserializer<V> valueDeserializer) {
-        delegate = CREATOR.create(config, keyDeserializer, valueDeserializer);
+        delegate = CREATOR.create(config, keyDeserializer, valueDeserializer);/* ClassicKafkaConsumer */
     }
 
     KafkaConsumer(LogContext logContext,
@@ -893,7 +893,7 @@ public class KafkaConsumer<K, V> implements Consumer<K, V> {
      */
     @Override
     public ConsumerRecords<K, V> poll(final Duration timeout) {
-        return delegate.poll(timeout);
+        return delegate.poll(timeout);//ClassicKafkaConsumer
     }
 
     /**
